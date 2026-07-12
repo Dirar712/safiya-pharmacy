@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة الصيدليات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --teal-950:#0A2E2C;
+    --teal-800:#0F5257;
+    --teal-600:#166B6E;
+    --amber-500:#D9A441;
+    --amber-300:#EFCB84;
+    --paper:#F6F4EF;
+    --surface:#FFFFFF;
+    --ink:#1C2B2A;
+    --ink-soft:#5B6B69;
+    --line:#E4E0D6;
+    --danger:#B3452C;
+    --ok:#3D7A5C;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Tajawal', sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .num{font-family:'IBM Plex Sans Arabic', sans-serif; font-variant-numeric: tabular-nums;}
+
+  /* Shell */
+  .shell{ display:flex; min-height:100vh; }
+  .nav{
+    width:260px; background:var(--teal-950); color:#EDEDE6;
+    display:flex; flex-direction:column; flex-shrink:0;
+  }
+  .nav-brand{
+    padding:28px 24px 20px; border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .nav-brand .mark{
+    width:40px;height:40px;border-radius:10px;background:var(--amber-500);
+    display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--teal-950);
+    font-size:18px; margin-bottom:10px;
+  }
+  .nav-brand h1{font-size:17px; font-weight:700;}
+  .nav-brand p{font-size:12px; color:#9FB3B0; margin-top:2px;}
+  .nav-mode{ padding:14px 24px 4px; font-size:11px; color:#7E948F; letter-spacing:.5px;}
+  .nav-items{ padding:6px 14px; display:flex; flex-direction:column; gap:2px; flex:1;}
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:9px;
+    color:#C7D2CF; font-size:14px; cursor:pointer; border:none; background:transparent;
+    text-align:right; width:100%; font-family:inherit; transition:.15s;
+  }
+  .nav-item:hover{ background:rgba(255,255,255,.06); color:#fff;}
+  .nav-item.active{ background:var(--teal-800); color:#fff; font-weight:600;}
+  .nav-item .ico{ width:8px;height:8px;border-radius:50%; background:currentColor; opacity:.5; flex-shrink:0;}
+  .nav-item.active .ico{ background:var(--amber-500); opacity:1;}
+  .nav-foot{ padding:16px 24px; border-top:1px solid rgba(255,255,255,.08); font-size:12px; color:#7E948F;}
+
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .topbar{
+    height:64px; background:var(--surface); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; padding:0 28px; flex-shrink:0;
+  }
+  .topbar h2{ font-size:16px; font-weight:700; }
+  .topbar .who{ display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-soft);}
+  .avatar{ width:32px;height:32px;border-radius:50%; background:var(--amber-300); display:flex;align-items:center;justify-content:center; font-weight:700; color:var(--teal-950); font-size:13px;}
+
+  .content{ padding:28px; overflow-y:auto; flex:1;}
+  .screen{ display:none; animation:fade .25s ease; }
+  .screen.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+  /* Cards / generic */
+  .grid{ display:grid; gap:16px; }
+  .g4{ grid-template-columns:repeat(4,1fr);}
+  .g3{ grid-template-columns:repeat(3,1fr);}
+  .g2{ grid-template-columns:2fr 1fr;}
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px;}
+  .stat-label{ font-size:12px; color:var(--ink-soft); margin-bottom:8px;}
+  .stat-value{ font-size:26px; font-weight:900;}
+  .stat-sub{ font-size:12px; color:var(--ok); margin-top:6px;}
+  .stat-sub.warn{ color:var(--danger); }
+
+  h3.section-title{ font-size:15px; font-weight:700; margin-bottom:14px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px;}
+  th{ text-align:right; color:var(--ink-soft); font-weight:600; padding:9px 10px; border-bottom:1px solid var(--line); font-size:12px;}
+  td{ padding:11px 10px; border-bottom:1px solid var(--line); }
+  tr:last-child td{ border-bottom:none; }
+  .pill{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;}
+  .pill.ok{ background:#E4F0E9; color:var(--ok);}
+  .pill.pending{ background:#FBF0DA; color:#96701C;}
+  .pill.danger{ background:#F7E4DE; color:var(--danger);}
+
+  .btn{ border:none; border-radius:9px; padding:10px 18px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer;}
+  .btn-primary{ background:var(--teal-800); color:#fff; }
+  .btn-primary:hover{ background:var(--teal-600); }
+  .btn-amber{ background:var(--amber-500); color:var(--teal-950); }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--ink); }
+
+  /* Login screen */
+  .login-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(160deg,var(--teal-950),var(--teal-800)); }
+  .login-box{ background:var(--surface); width:380px; border-radius:18px; padding:36px 32px; box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .login-box .mark{ width:46px;height:46px;border-radius:12px;background:var(--amber-500); display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--teal-950); font-size:20px; margin-bottom:16px;}
+  .login-box h1{ font-size:20px; margin-bottom:4px;}
+  .login-box p{ font-size:13px; color:var(--ink-soft); margin-bottom:26px;}
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12px; font-weight:600; margin-bottom:6px; color:var(--ink-soft);}
+  .field input, .field select{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:9px; font-family:inherit; font-size:14px; background:#FBFAF7;}
+  .field input:focus, .field select:focus{ outline:2px solid var(--amber-300); border-color:var(--amber-500);}
+  .login-box .btn-primary{ width:100%; padding:12px; margin-top:6px; font-size:14px;}
+  .back-link{ text-align:center; margin-top:16px; font-size:12px; color:#EFCB84; cursor:pointer;}
+
+  /* Product grid */
+  .toolbar{ display:flex; gap:10px; margin-bottom:18px; }
+  .toolbar input{ flex:1; padding:11px 14px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--surface);}
+  .toolbar select{ padding:11px 14px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--surface);}
+  .p-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .p-card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:8px;}
+  .p-top{ display:flex; justify-content:space-between; align-items:flex-start;}
+  .p-name{ font-weight:700; font-size:14px;}
+  .p-sub{ font-size:11px; color:var(--ink-soft);}
+  .p-exp{ font-size:11px; margin-top:2px;}
+  .p-bottom{ display:flex; justify-content:space-between; align-items:center; margin-top:6px;}
+  .p-price{ font-weight:900; font-size:15px;}
+  .add-btn{ background:var(--teal-800); color:#fff; border:none; border-radius:8px; width:32px;height:32px; font-size:18px; cursor:pointer;}
+  .add-btn:hover{ background:var(--teal-600); }
+
+  /* Cart */
+  .cart-item{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line);}
+  .cart-item:last-child{ border-bottom:none;}
+  .cart-name{ font-weight:600; font-size:13px;}
+  .cart-meta{ font-size:11px; color:var(--ink-soft);}
+  .qty{ display:flex; align-items:center; gap:8px;}
+  .qty button{ width:24px;height:24px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer;}
+  .pay-opt{ display:flex; gap:10px; margin-top:10px;}
+  .pay-opt label{ flex:1; border:1px solid var(--line); border-radius:10px; padding:12px; text-align:center; font-size:12px; cursor:pointer; font-weight:600;}
+  .pay-opt input{ display:none; }
+  .pay-opt input:checked + span{ color:var(--teal-800); }
+  .pay-opt label:has(input:checked){ border-color:var(--teal-800); background:#EAF3F1;}
+  .summary-row{ display:flex; justify-content:space-between; font-size:13px; padding:6px 0; color:var(--ink-soft);}
+  .summary-row.total{ color:var(--ink); font-weight:800; font-size:16px; border-top:1px solid var(--line); margin-top:8px; padding-top:12px;}
+
+  /* Product thumbnail */
+  .prod-thumb{
+    width:38px; height:38px; border-radius:8px; background:#EAF3F1; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:18px; overflow:hidden;
+  }
+  .prod-thumb img{ width:100%; height:100%; object-fit:cover; }
+
+  /* Modal */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(10,46,44,.45);
+    align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:var(--surface); border-radius:16px; width:480px; max-width:100%;
+    max-height:90vh; overflow-y:auto; box-shadow:0 24px 70px rgba(0,0,0,.35);
+  }
+  .modal-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:18px 22px; border-bottom:1px solid var(--line);
+  }
+  .modal-head h3{ font-size:16px; font-weight:700; }
+  .modal-close{ background:none; border:none; font-size:22px; color:var(--ink-soft); cursor:pointer; line-height:1;}
+  .modal-body{ padding:22px; }
+  .modal-foot{
+    display:flex; justify-content:flex-end; gap:10px;
+    padding:16px 22px; border-top:1px solid var(--line);
+  }
+
+  .img-upload{
+    border:2px dashed var(--line); border-radius:12px; height:160px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    background:#FBFAF7; transition:.15s; overflow:hidden; position:relative;
+  }
+  .img-upload:hover{ border-color:var(--amber-500); background:#FBF6EA; }
+  .img-upload img{ width:100%; height:100%; object-fit:cover; }
+  .img-upload-ico{ font-size:26px; margin-bottom:6px; }
+  .img-upload-text{ font-size:13px; font-weight:600; color:var(--ink); }
+  .img-upload-hint{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  #imgPlaceholder{ text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-wrap">
+  <div class="login-box">
+    <div class="mark">ص</div>
+    <h1>دخول المنصة</h1>
+    <p>سجّل دخولك لتصفح المنتجات ومتابعة طلباتك</p>
+    <div class="field">
+      <label>البريد الإلكتروني</label>
+      <input type="email" id="loginEmail" placeholder="pharmacy@example.com">
+    </div>
+    <div class="field">
+      <label>كلمة المرور</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+    </div>
+    <div id="loginError" style="display:none; color:var(--danger); font-size:12px; margin-bottom:10px;"></div>
+    <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">دخول</button>
+    <div class="back-link" onclick="document.getElementById('demoNote').style.display='block'">تجربة بدون حساب (وضع العرض) ←</div>
+    <div id="demoNote" style="display:none; font-size:11px; color:var(--ink-soft); margin-top:10px; text-align:center;">
+      وضع العرض يعرض بيانات تجريبية دون ربط حقيقي —
+      <span style="color:var(--teal-800); cursor:pointer; font-weight:700;" onclick="enterApp('pharmacy', true)">صيدلية تجريبية</span> ·
+      <span style="color:var(--teal-800); cursor:pointer; font-weight:700;" onclick="enterApp('admin', true)">مورّد تجريبي</span>
+    </div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="appShell" class="shell" style="display:none">
+  <nav class="nav">
+    <div class="nav-brand">
+      <div class="mark">ص</div>
+      <h1>منصة الصيدليات</h1>
+      <p id="brandSub">حساب صيدلية النور</p>
+    </div>
+
+    <div id="pharmacyNav">
+      <div class="nav-mode">حساب الصيدلية</div>
+      <div class="nav-items">
+        <button class="nav-item active" data-screen="dashboard"><span class="ico"></span>لوحة الرئيسية</button>
+        <button class="nav-item" data-screen="products"><span class="ico"></span>تصفح المنتجات</button>
+        <button class="nav-item" data-screen="cart"><span class="ico"></span>السلة والطلب</button>
+        <button class="nav-item" data-screen="favorites"><span class="ico"></span>المفضلة وإعادة الطلب</button>
+        <button class="nav-item" data-screen="statement"><span class="ico"></span>كشف الحساب</button>
+        <button class="nav-item" data-screen="notifications"><span class="ico"></span>الإشعارات</button>
+      </div>
+    </div>
+
+    <div id="adminNav" style="display:none">
+      <div class="nav-mode">لوحة المورّد</div>
+      <div class="nav-items">
+        <button class="nav-item active" data-screen="admin-overview"><span class="ico"></span>لوحة التحكم</button>
+        <button class="nav-item" data-screen="admin-orders"><span class="ico"></span>الطلبات</button>
+        <button class="nav-item" data-screen="admin-inventory"><span class="ico"></span>المنتجات</button>
+        <button class="nav-item" data-screen="admin-invoices"><span class="ico"></span>الفواتير</button>
+        <button class="nav-item" data-screen="admin-reports"><span class="ico"></span>التقارير</button>
+        <button class="nav-item" data-screen="notifications"><span class="ico"></span>سجل الإشعارات</button>
+      </div>
+    </div>
+
+    <div class="nav-foot">تسجيل الخروج</div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <h2 id="topbarTitle">لوحة الرئيسية</h2>
+      <div class="who"><div class="avatar">ن</div> صيدلية النور</div>
+    </div>
+
+    <div class="content">
+
+      <!-- Pharmacy Dashboard -->
+      <div class="screen active" id="screen-dashboard">
+        <div class="grid g4" style="margin-bottom:20px;">
+          <div class="card"><div class="stat-label">الرصيد الآجل</div><div class="stat-value num">42,500</div><div class="stat-sub warn">سقف الائتمان: 100,000 ج.س</div></div>
+          <div class="card"><div class="stat-label">طلبات هذا الشهر</div><div class="stat-value num">14</div><div class="stat-sub">+3 عن الشهر الماضي</div></div>
+          <div class="card"><div class="stat-label">طلبات قيد المراجعة</div><div class="stat-value num">2</div></div>
+          <div class="card"><div class="stat-label">أصناف تقترب من النفاذ</div><div class="stat-value num">5</div><div class="stat-sub warn">راجع التنبيهات</div></div>
+        </div>
+        <div class="card">
+          <h3 class="section-title">آخر الطلبات</h3>
+          <table>
+            <tr><th>رقم الطلب</th><th>التاريخ</th><th>القيمة</th><th>طريقة الدفع</th><th>الحالة</th></tr>
+            <tr><td class="num">#1042</td><td class="num">2026/07/10</td><td class="num">6,200 ج.س</td><td>حساب آجل</td><td><span class="pill ok">تم التسليم</span></td></tr>
+            <tr><td class="num">#1041</td><td class="num">2026/07/08</td><td class="num">3,150 ج.س</td><td>تحويل بنكي</td><td><span class="pill pending">قيد المراجعة</span></td></tr>
+            <tr><td class="num">#1039</td><td class="num">2026/07/03</td><td class="num">9,800 ج.س</td><td>كاش عند الاستلام</td><td><span class="pill ok">تم التسليم</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Products -->
+      <div class="screen" id="screen-products">
+        <div class="toolbar">
+          <input type="text" id="productSearch" placeholder="ابحث بالاسم التجاري أو المادة الفعالة..." oninput="renderProducts()">
+          <select id="productCategoryFilter" onchange="renderProducts()"><option value="">كل التصنيفات</option></select>
+        </div>
+        <div id="dbStatusBanner" style="display:none; background:#FBF0DA; color:#96701C; font-size:12px; padding:10px 14px; border-radius:9px; margin-bottom:14px;"></div>
+        <div class="p-grid" id="productsGrid">
+          <div class="p-card">
+            <div class="p-top"><div><div class="p-name">بنادول إكسترا</div><div class="p-sub">باراسيتامول 500mg</div></div></div>
+            <div class="p-exp" style="color:var(--ok)">صلاحية: 2027/09</div>
+            <div class="p-bottom"><div class="p-price num">2,400 ج.س</div><button class="add-btn">+</button></div>
+          </div>
+          <div class="p-card">
+            <div class="p-top"><div><div class="p-name">أوجمنتين</div><div class="p-sub">أموكسيسيلين 1g</div></div></div>
+            <div class="p-exp" style="color:var(--danger)">صلاحية: 2026/10 — قريبة</div>
+            <div class="p-bottom"><div class="p-price num">5,100 ج.س</div><button class="add-btn">+</button></div>
+          </div>
+          <div class="p-card">
+            <div class="p-top"><div><div class="p-name">فيتامين سي فوار</div><div class="p-sub">1000mg — 20 قرص</div></div></div>
+            <div class="p-exp" style="color:var(--ok)">صلاحية: 2028/01</div>
+            <div class="p-bottom"><div class="p-price num">1,850 ج.س</div><button class="add-btn">+</button></div>
+          </div>
+          <div class="p-card">
+            <div class="p-top"><div><div class="p-name">كمامات طبية</div><div class="p-sub">علبة 50 قطعة</div></div></div>
+            <div class="p-exp" style="color:var(--ink-soft)">—</div>
+            <div class="p-bottom"><div class="p-price num">3,000 ج.س</div><button class="add-btn">+</button></div>
+          </div>
+          <div class="p-card">
+            <div class="p-top"><div><div class="p-name">فولتارين جل</div><div class="p-sub">ديكلوفيناك 1%</div></div></div>
+            <div class="p-exp" style="color:var(--ok)">صلاحية: 2027/04</div>
+            <div class="p-bottom"><div class="p-price num">2,900 ج.س</div><button class="add-btn">+</button></div>
+          </div>
+          <div class="p-card">
+            <div class="p-top"><div><div class="p-name">محلول معقم</div><div class="p-sub">500ml</div></div></div>
+            <div class="p-exp" style="color:var(--ok)">صلاحية: 2027/12</div>
+            <div class="p-bottom"><div class="p-price num">1,300 ج.س</div><button class="add-btn">+</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cart -->
+      <div class="screen" id="screen-cart">
+        <div class="grid g2">
+          <div class="card">
+            <h3 class="section-title">عناصر السلة</h3>
+            <div class="cart-item">
+              <div><div class="cart-name">بنادول إكسترا</div><div class="cart-meta">2,400 ج.س / علبة</div></div>
+              <div class="qty"><button>−</button><span class="num">10</span><button>+</button></div>
+            </div>
+            <div class="cart-item">
+              <div><div class="cart-name">أوجمنتين</div><div class="cart-meta">5,100 ج.س / علبة</div></div>
+              <div class="qty"><button>−</button><span class="num">4</span><button>+</button></div>
+            </div>
+            <div class="cart-item">
+              <div><div class="cart-name">فيتامين سي فوار</div><div class="cart-meta">1,850 ج.س / علبة</div></div>
+              <div class="qty"><button>−</button><span class="num">6</span><button>+</button></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="section-title">طريقة الدفع</h3>
+            <div class="pay-opt">
+              <label><input type="radio" name="pay" checked><span>كاش</span></label>
+              <label><input type="radio" name="pay"><span>تحويل بنكي</span></label>
+              <label><input type="radio" name="pay"><span>حساب آجل</span></label>
+            </div>
+            <div class="summary-row"><span>عدد الأصناف</span><span class="num">3</span></div>
+            <div class="summary-row"><span>الإجمالي الفرعي</span><span class="num">54,600 ج.س</span></div>
+            <div class="summary-row total"><span>الإجمالي</span><span class="num">54,600 ج.س</span></div>
+            <button class="btn btn-amber" id="confirmOrderBtn" style="width:100%; margin-top:16px; padding:12px;" onclick="confirmOrder()">تأكيد الطلب</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Favorites -->
+      <div class="screen" id="screen-favorites">
+        <div class="card" style="margin-bottom:16px;">
+          <h3 class="section-title">الأصناف المفضلة</h3>
+          <div class="p-grid">
+            <div class="p-card">
+              <div class="p-top"><div><div class="p-name">بنادول إكسترا</div><div class="p-sub">متوسط الطلب شهريًا: 15 علبة</div></div></div>
+              <div class="p-bottom"><div class="p-price num">2,400 ج.س</div><button class="add-btn">+</button></div>
+            </div>
+            <div class="p-card">
+              <div class="p-top"><div><div class="p-name">فيتامين سي فوار</div><div class="p-sub">متوسط الطلب شهريًا: 8 علب</div></div></div>
+              <div class="p-bottom"><div class="p-price num">1,850 ج.س</div><button class="add-btn">+</button></div>
+            </div>
+            <div class="p-card">
+              <div class="p-top"><div><div class="p-name">محلول معقم</div><div class="p-sub">متوسط الطلب شهريًا: 5 علب</div></div></div>
+              <div class="p-bottom"><div class="p-price num">1,300 ج.س</div><button class="add-btn">+</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="section-title">إعادة طلب سابق بضغطة واحدة</h3>
+          <table>
+            <tr><th>رقم الطلب</th><th>التاريخ</th><th>عدد الأصناف</th><th>القيمة</th><th></th></tr>
+            <tr><td class="num">#1042</td><td class="num">2026/07/10</td><td class="num">6</td><td class="num">6,200 ج.س</td><td><button class="btn btn-amber" style="padding:6px 16px;">إعادة الطلب</button></td></tr>
+            <tr><td class="num">#1039</td><td class="num">2026/07/03</td><td class="num">4</td><td class="num">9,800 ج.س</td><td><button class="btn btn-amber" style="padding:6px 16px;">إعادة الطلب</button></td></tr>
+            <tr><td class="num">#1031</td><td class="num">2026/06/20</td><td class="num">9</td><td class="num">15,400 ج.س</td><td><button class="btn btn-amber" style="padding:6px 16px;">إعادة الطلب</button></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Statement of account -->
+      <div class="screen" id="screen-statement">
+        <div class="grid g3" style="margin-bottom:20px;">
+          <div class="card"><div class="stat-label">الرصيد الحالي (مديونية)</div><div class="stat-value num" style="color:var(--danger)">42,500 ج.س</div></div>
+          <div class="card"><div class="stat-label">سقف الائتمان</div><div class="stat-value num">100,000 ج.س</div></div>
+          <div class="card"><div class="stat-label">أقرب موعد استحقاق</div><div class="stat-value num" style="font-size:18px;">2026/07/25</div><div class="stat-sub warn">بعد 13 يوم</div></div>
+        </div>
+        <div class="card">
+          <h3 class="section-title">كشف الحساب</h3>
+          <table>
+            <tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr>
+            <tr><td class="num">2026/07/10</td><td>فاتورة طلب #1042</td><td class="num">6,200</td><td>—</td><td class="num">42,500</td></tr>
+            <tr><td class="num">2026/07/05</td><td>سداد دفعة</td><td>—</td><td class="num">10,000</td><td class="num">36,300</td></tr>
+            <tr><td class="num">2026/07/03</td><td>فاتورة طلب #1039</td><td class="num">9,800</td><td>—</td><td class="num">46,300</td></tr>
+            <tr><td class="num">2026/06/20</td><td>فاتورة طلب #1031</td><td class="num">15,400</td><td>—</td><td class="num">36,500</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin: Overview -->
+      <div class="screen active" id="screen-admin-overview">
+        <div class="grid g4" style="margin-bottom:20px;">
+          <div class="card"><div class="stat-label">مبيعات اليوم</div><div class="stat-value num">18,400</div><div class="stat-sub">6 طلبات</div></div>
+          <div class="card"><div class="stat-label">طلبات بانتظار المراجعة</div><div class="stat-value num">2</div><div class="stat-sub warn">تحتاج إجراء</div></div>
+          <div class="card"><div class="stat-label">فواتير غير مسددة</div><div class="stat-value num">158,400</div><div class="stat-sub warn">7 فواتير آجلة</div></div>
+          <div class="card"><div class="stat-label">أصناف قاربت على الصلاحية</div><div class="stat-value num">5</div><div class="stat-sub warn">راجع المخزون</div></div>
+        </div>
+        <div class="grid g2">
+          <div class="card">
+            <h3 class="section-title">أحدث الطلبات</h3>
+            <table>
+              <tr><th>الصيدلية</th><th>رقم الطلب</th><th>القيمة</th><th>الحالة</th></tr>
+              <tr><td>صيدلية النور</td><td class="num">#1043</td><td class="num">54,600</td><td><span class="pill pending">بانتظار المراجعة</span></td></tr>
+              <tr><td>صيدلية الشفاء</td><td class="num">#1044</td><td class="num">12,300</td><td><span class="pill pending">بانتظار المراجعة</span></td></tr>
+              <tr><td>صيدلية الأمل</td><td class="num">#1040</td><td class="num">8,900</td><td><span class="pill ok">مقبول</span></td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <h3 class="section-title">تنبيهات المخزون</h3>
+            <table>
+              <tr><th>المنتج</th><th>السبب</th><th>الإجراء</th></tr>
+              <tr><td>أوجمنتين</td><td><span class="pill danger">صلاحية قريبة</span></td><td><button class="btn btn-ghost" style="padding:5px 12px;">تصريف عاجل</button></td></tr>
+              <tr><td>كمامات طبية</td><td><span class="pill pending">كمية منخفضة</span></td><td><button class="btn btn-ghost" style="padding:5px 12px;">إعادة تعبئة</button></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin: Orders -->
+      <div class="screen" id="screen-admin-orders">
+        <div class="toolbar">
+          <button class="btn btn-primary" style="padding:9px 16px;">الكل</button>
+          <button class="btn btn-ghost" style="padding:9px 16px;">بانتظار المراجعة</button>
+          <button class="btn btn-ghost" style="padding:9px 16px;">قيد التجهيز</button>
+          <button class="btn btn-ghost" style="padding:9px 16px;">تم الشحن</button>
+          <button class="btn btn-ghost" style="padding:9px 16px;">تم التسليم</button>
+          <button class="btn btn-ghost" style="padding:9px 16px;">ملغي</button>
+        </div>
+        <div class="card">
+          <table>
+            <tr><th>الصيدلية</th><th>رقم الطلب</th><th>التاريخ</th><th>القيمة</th><th>طريقة الدفع</th><th>الحالة</th><th></th></tr>
+            <tr><td>صيدلية النور</td><td class="num">#1043</td><td class="num">2026/07/12</td><td class="num">54,600</td><td>حساب آجل</td><td><span class="pill pending">بانتظار المراجعة</span></td><td><button class="btn btn-primary" style="padding:6px 14px;">قبول</button></td></tr>
+            <tr><td>صيدلية الشفاء</td><td class="num">#1044</td><td class="num">2026/07/12</td><td class="num">12,300</td><td>تحويل بنكي</td><td><span class="pill pending">بانتظار المراجعة</span></td><td><button class="btn btn-primary" style="padding:6px 14px;">قبول</button></td></tr>
+            <tr><td>صيدلية الأمل</td><td class="num">#1040</td><td class="num">2026/07/09</td><td class="num">8,900</td><td>كاش</td><td><span class="pill pending">قيد التجهيز</span></td><td><button class="btn btn-ghost" style="padding:6px 14px;">تحديث الحالة</button></td></tr>
+            <tr><td>صيدلية الأمل</td><td class="num">#1039</td><td class="num">2026/07/03</td><td class="num">9,800</td><td>كاش</td><td><span class="pill ok">تم التسليم</span></td><td><button class="btn btn-ghost" style="padding:6px 14px;">عرض</button></td></tr>
+            <tr><td>صيدلية النور</td><td class="num">#1035</td><td class="num">2026/06/28</td><td class="num">4,100</td><td>تحويل بنكي</td><td><span class="pill danger">ملغي</span></td><td><button class="btn btn-ghost" style="padding:6px 14px;">عرض</button></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin: Invoices -->
+      <div class="screen" id="screen-admin-invoices">
+        <div class="grid g3" style="margin-bottom:20px;">
+          <div class="card"><div class="stat-label">إجمالي الفواتير المسددة (هذا الشهر)</div><div class="stat-value num" style="color:var(--ok)">312,000</div></div>
+          <div class="card"><div class="stat-label">فواتير آجلة قائمة</div><div class="stat-value num" style="color:var(--danger)">158,400</div></div>
+          <div class="card"><div class="stat-label">فواتير متأخرة السداد</div><div class="stat-value num">3</div><div class="stat-sub warn">تحتاج متابعة</div></div>
+        </div>
+        <div class="card">
+          <div class="toolbar">
+            <input type="text" placeholder="ابحث برقم الفاتورة أو اسم الصيدلية...">
+            <select><option>كل الحالات</option><option>مسددة</option><option>آجلة</option><option>متأخرة</option></select>
+          </div>
+          <table>
+            <tr><th>رقم الفاتورة</th><th>الصيدلية</th><th>تاريخ الإصدار</th><th>تاريخ الاستحقاق</th><th>القيمة</th><th>الحالة</th><th></th></tr>
+            <tr><td class="num">INV-1043</td><td>صيدلية النور</td><td class="num">2026/07/12</td><td class="num">2026/08/12</td><td class="num">54,600</td><td><span class="pill pending">آجلة</span></td><td><button class="btn btn-ghost" style="padding:6px 14px;">تحميل PDF</button></td></tr>
+            <tr><td class="num">INV-1040</td><td>صيدلية الأمل</td><td class="num">2026/07/09</td><td class="num">—</td><td class="num">8,900</td><td><span class="pill ok">مسددة</span></td><td><button class="btn btn-ghost" style="padding:6px 14px;">تحميل PDF</button></td></tr>
+            <tr><td class="num">INV-1031</td><td>صيدلية النور</td><td class="num">2026/06/20</td><td class="num">2026/07/05</td><td class="num">15,400</td><td><span class="pill danger">متأخرة</span></td><td><button class="btn btn-primary" style="padding:6px 14px;">تذكير دفع</button></td></tr>
+            <tr><td class="num">INV-1028</td><td>صيدلية الشفاء</td><td class="num">2026/06/15</td><td class="num">—</td><td class="num">22,700</td><td><span class="pill ok">مسددة</span></td><td><button class="btn btn-ghost" style="padding:6px 14px;">تحميل PDF</button></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin: Inventory -->
+      <div class="screen" id="screen-admin-inventory">
+        <div class="toolbar">
+          <input type="text" placeholder="ابحث في المخزون...">
+          <button class="btn btn-primary" onclick="openProductModal()">+ إضافة منتج</button>
+        </div>
+        <div class="card">
+          <table>
+            <tr><th>الصورة</th><th>المنتج</th><th>التصنيف</th><th>الكمية</th><th>السعر</th><th>الصلاحية</th><th>الحالة</th><th></th></tr>
+            <tbody id="inventoryTableBody">
+            <tr><td><div class="prod-thumb">💊</div></td><td>بنادول إكسترا</td><td>مسكنات</td><td class="num">320</td><td class="num">2,400 ج.س</td><td class="num">2027/09</td><td><span class="pill ok">متوفر</span></td><td><button class="btn btn-ghost" style="padding:5px 12px;" onclick="openProductModal()">تعديل</button></td></tr>
+            <tr><td><div class="prod-thumb">💊</div></td><td>أوجمنتين</td><td>مضادات حيوية</td><td class="num">18</td><td class="num">5,100 ج.س</td><td class="num">2026/10</td><td><span class="pill danger">صلاحية قريبة</span></td><td><button class="btn btn-ghost" style="padding:5px 12px;" onclick="openProductModal()">تعديل</button></td></tr>
+            <tr><td><div class="prod-thumb">💊</div></td><td>فيتامين سي فوار</td><td>فيتامينات</td><td class="num">210</td><td class="num">1,850 ج.س</td><td class="num">2028/01</td><td><span class="pill ok">متوفر</span></td><td><button class="btn btn-ghost" style="padding:5px 12px;" onclick="openProductModal()">تعديل</button></td></tr>
+            <tr><td><div class="prod-thumb">📦</div></td><td>كمامات طبية</td><td>مستلزمات</td><td class="num">6</td><td class="num">3,000 ج.س</td><td>—</td><td><span class="pill pending">كمية منخفضة</span></td><td><button class="btn btn-ghost" style="padding:5px 12px;" onclick="openProductModal()">تعديل</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Add/Edit Product Modal -->
+      <div class="modal-overlay" id="productModal">
+        <div class="modal-box">
+          <div class="modal-head">
+            <h3>إضافة منتج جديد</h3>
+            <button class="modal-close" onclick="closeProductModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="img-upload" id="imgUploadZone" onclick="document.getElementById('imgInput').click()">
+              <img id="imgPreview" style="display:none;">
+              <div id="imgPlaceholder">
+                <div class="img-upload-ico">📷</div>
+                <div class="img-upload-text">اضغط لرفع صورة المنتج</div>
+                <div class="img-upload-hint">PNG أو JPG — حتى 5MB</div>
+              </div>
+            </div>
+            <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="previewImage(event)">
+
+            <div class="grid g2" style="margin-top:18px;">
+              <div class="field"><label>اسم المنتج</label><input type="text" id="pName" placeholder="مثال: بنادول إكسترا"></div>
+              <div class="field"><label>التصنيف</label>
+                <select id="pCategory"><option>مسكنات</option><option>مضادات حيوية</option><option>فيتامينات</option><option>مستلزمات طبية</option></select>
+              </div>
+            </div>
+            <div class="grid g3">
+              <div class="field"><label>الكمية</label><input type="number" id="pQuantity" placeholder="0"></div>
+              <div class="field"><label>السعر (ج.س)</label><input type="number" id="pPrice" placeholder="0"></div>
+              <div class="field"><label>تاريخ الصلاحية</label><input type="date" id="pExpiry"></div>
+            </div>
+            <div id="modalError" style="display:none; color:var(--danger); font-size:12px; margin-top:10px;"></div>
+          </div>
+          <div class="modal-foot">
+            <button class="btn btn-ghost" onclick="closeProductModal()">إلغاء</button>
+            <button class="btn btn-primary" id="saveProductBtn" onclick="saveProduct()">حفظ المنتج</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin: Reports -->
+      <div class="screen" id="screen-admin-reports">
+        <div class="grid g4" style="margin-bottom:20px;">
+          <div class="card"><div class="stat-label">مبيعات هذا الشهر</div><div class="stat-value num">312,000</div><div class="stat-sub">+18% عن الشهر الماضي</div></div>
+          <div class="card"><div class="stat-label">عدد الطلبات</div><div class="stat-value num">86</div></div>
+          <div class="card"><div class="stat-label">صيدليات نشطة</div><div class="stat-value num">23</div></div>
+          <div class="card"><div class="stat-label">مديونية إجمالية</div><div class="stat-value num" style="color:var(--danger)">158,400</div></div>
+        </div>
+        <div class="grid g2">
+          <div class="card">
+            <h3 class="section-title">الأكثر طلبًا هذا الشهر</h3>
+            <table>
+              <tr><th>المنتج</th><th>الكمية المباعة</th><th>الإيراد</th></tr>
+              <tr><td>بنادول إكسترا</td><td class="num">840</td><td class="num">2,016,000</td></tr>
+              <tr><td>أوجمنتين</td><td class="num">310</td><td class="num">1,581,000</td></tr>
+              <tr><td>فيتامين سي فوار</td><td class="num">520</td><td class="num">962,000</td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <h3 class="section-title">أكثر الصيدليات نشاطًا</h3>
+            <table>
+              <tr><th>الصيدلية</th><th>عدد الطلبات</th><th>إجمالي المشتريات</th></tr>
+              <tr><td>صيدلية النور</td><td class="num">14</td><td class="num">89,400</td></tr>
+              <tr><td>صيدلية الشفاء</td><td class="num">11</td><td class="num">64,200</td></tr>
+              <tr><td>صيدلية الأمل</td><td class="num">9</td><td class="num">51,800</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications (shared) -->
+      <div class="screen" id="screen-notifications" data-shared="true">
+        <div class="card" style="margin-bottom:16px;">
+          <h3 class="section-title">قنوات الإشعارات</h3>
+          <div class="cart-item">
+            <div><div class="cart-name">واتساب</div><div class="cart-meta">إشعار فوري عند تأكيد الطلب أو تغيّر حالته</div></div>
+            <span class="pill ok">مُفعّل</span>
+          </div>
+          <div class="cart-item">
+            <div><div class="cart-name">رسائل SMS</div><div class="cart-meta">نسخة احتياطية عند تعذّر الاتصال بالإنترنت</div></div>
+            <span class="pill ok">مُفعّل</span>
+          </div>
+          <div class="cart-item">
+            <div><div class="cart-name">إشعارات داخل الموقع</div><div class="cart-meta">تظهر داخل لوحة الحساب</div></div>
+            <span class="pill ok">مُفعّل</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="section-title">آخر الإشعارات المرسلة</h3>
+          <table>
+            <tr><th>التاريخ</th><th>القناة</th><th>المستلم</th><th>المحتوى</th></tr>
+            <tr><td class="num">2026/07/12</td><td>واتساب</td><td>صيدلية النور</td><td>تم قبول طلبك #1043</td></tr>
+            <tr><td class="num">2026/07/11</td><td>SMS</td><td>صيدلية الشفاء</td><td>طلبك #1044 بانتظار المراجعة</td></tr>
+            <tr><td class="num">2026/07/10</td><td>واتساب</td><td>صيدلية النور</td><td>تم تسليم الطلب #1042</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// إعدادات الاتصال بـ Supabase — عوّض القيمتين دول ببيانات مشروعك
+// (Supabase Dashboard → Project Settings → API)
+// ============================================================
+const SUPABASE_URL = 'https://iropqrxvrqgttmnkgfle.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_4Q6Wh5cYBnrG7jarWJNhtQ_DSWaZyw8';
+
+let supabaseClient = null;
+let isDbConnected = false;
+try {
+  if (SUPABASE_URL.includes('YOUR-PROJECT') === false) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    isDbConnected = true;
+  }
+} catch (e) { console.warn('Supabase init failed', e); }
+
+let currentMode = null;
+let currentPharmacy = null; // صف الصيدلية من جدول pharmacies بعد الدخول
+let allProducts = [];       // تُملأ من قاعدة البيانات أو تبقى فاضية في وضع العرض
+let allCategories = [];
+
+// ------------------------------------------------------------
+// تسجيل الدخول
+// ------------------------------------------------------------
+async function handleLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errBox = document.getElementById('loginError');
+  errBox.style.display = 'none';
+
+  if(!supabaseClient){
+    errBox.textContent = 'لم يتم ربط قاعدة البيانات بعد. عوّض SUPABASE_URL و SUPABASE_ANON_KEY في الكود، أو جرّب "وضع العرض" بالأسفل.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if(!email || !password){
+    errBox.textContent = 'أدخل البريد الإلكتروني وكلمة المرور';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = 'جارٍ الدخول...'; btn.disabled = true;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  btn.textContent = 'دخول'; btn.disabled = false;
+
+  if(error){
+    errBox.textContent = 'بيانات الدخول غير صحيحة: ' + error.message;
+    errBox.style.display = 'block';
+    return;
+  }
+
+  // تحقق هل الحساب صيدلية أو إدارة
+  const { data: pharmacy } = await supabaseClient.from('pharmacies').select('*').eq('auth_user_id', data.user.id).maybeSingle();
+  if(pharmacy){
+    currentPharmacy = pharmacy;
+    enterApp('pharmacy', false);
+    return;
+  }
+  const { data: admin } = await supabaseClient.from('admins').select('*').eq('auth_user_id', data.user.id).maybeSingle();
+  if(admin){
+    enterApp('admin', false);
+    return;
+  }
+  errBox.textContent = 'هذا الحساب غير مربوط بصيدلية أو بحساب إدارة. تحقق من جداول pharmacies / admins.';
+  errBox.style.display = 'block';
+}
+
+// ------------------------------------------------------------
+// الدخول للتطبيق (وضع حقيقي متصل بقاعدة البيانات أو وضع عرض تجريبي)
+// ------------------------------------------------------------
+function enterApp(mode, isDemo){
+  currentMode = mode;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+  document.getElementById('pharmacyNav').style.display = mode === 'pharmacy' ? 'block' : 'none';
+  document.getElementById('adminNav').style.display = mode === 'admin' ? 'block' : 'none';
+
+  const pharmacyName = currentPharmacy ? currentPharmacy.name : 'صيدلية النور (عرض)';
+  document.getElementById('brandSub').textContent = mode === 'pharmacy' ? 'حساب ' + pharmacyName : 'حساب المورّد';
+  document.querySelector('.who').innerHTML = mode === 'pharmacy'
+    ? '<div class="avatar">' + pharmacyName.charAt(0) + '</div> ' + pharmacyName
+    : '<div class="avatar">م</div> إدارة المورّد';
+
+  const banner = document.getElementById('dbStatusBanner');
+  if(!isDbConnected || isDemo){
+    banner.style.display = 'block';
+    banner.textContent = isDbConnected
+      ? 'وضع عرض تجريبي — البيانات المعروضة تجريبية وليست من قاعدة البيانات.'
+      : 'قاعدة البيانات غير مربوطة بعد — عوّض SUPABASE_URL في الكود لعرض بيانات حقيقية.';
+  } else {
+    banner.style.display = 'none';
+    loadCategories();
+    loadProducts();
+  }
+
+  const first = mode === 'pharmacy' ? 'dashboard' : 'admin-overview';
+  showScreen(first, mode);
+}
+
+function showScreen(name, mode){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  const scope = mode === 'admin' ? '#adminNav' : '#pharmacyNav';
+  document.querySelectorAll(scope + ' .nav-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === name);
+  });
+  document.getElementById('topbarTitle').textContent = document.querySelector(scope + ` .nav-item[data-screen="${name}"]`).textContent.trim();
+}
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.closest('#adminNav') ? 'admin' : 'pharmacy';
+    showScreen(btn.dataset.screen, mode);
+  });
+});
+
+// ------------------------------------------------------------
+// تحميل المنتجات والتصنيفات من قاعدة البيانات
+// ------------------------------------------------------------
+async function loadCategories(){
+  if(!supabaseClient) return;
+  const { data, error } = await supabaseClient.from('categories').select('*').order('name');
+  if(error){ console.error(error); return; }
+  allCategories = data || [];
+  const filter = document.getElementById('productCategoryFilter');
+  const pCategory = document.getElementById('pCategory');
+  filter.innerHTML = '<option value="">كل التصنيفات</option>' + allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  pCategory.innerHTML = allCategories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+async function loadProducts(){
+  if(!supabaseClient) return;
+  const { data, error } = await supabaseClient.from('products').select('*, categories(name)').order('created_at', { ascending: false });
+  if(error){ console.error(error); return; }
+  allProducts = data || [];
+  renderProducts();
+  renderInventoryTable();
+}
+
+function renderProducts(){
+  const grid = document.getElementById('productsGrid');
+  const search = (document.getElementById('productSearch')?.value || '').trim();
+  const catFilter = document.getElementById('productCategoryFilter')?.value || '';
+  const filtered = allProducts.filter(p =>
+    (!search || p.name.includes(search)) && (!catFilter || p.category_id === catFilter)
+  );
+  if(filtered.length === 0){ grid.innerHTML = '<p style="color:var(--ink-soft); font-size:13px;">لا توجد منتجات مطابقة.</p>'; return; }
+  grid.innerHTML = filtered.map(p => `
+    <div class="p-card">
+      <div class="p-top"><div><div class="p-name">${p.name}</div><div class="p-sub">${p.categories ? p.categories.name : ''}</div></div></div>
+      <div class="p-exp" style="color:${expiryColor(p.expiry_date)}">${p.expiry_date ? 'صلاحية: ' + p.expiry_date : '—'}</div>
+      <div class="p-bottom"><div class="p-price num">${Number(p.price).toLocaleString()} ج.س</div><button class="add-btn" onclick="addToCart('${p.id}')">+</button></div>
+    </div>`).join('');
+}
+
+function renderInventoryTable(){
+  const body = document.getElementById('inventoryTableBody');
+  body.innerHTML = allProducts.map(p => `
+    <tr>
+      <td><div class="prod-thumb">${p.image_url ? `<img src="${p.image_url}">` : '💊'}</div></td>
+      <td>${p.name}</td>
+      <td>${p.categories ? p.categories.name : ''}</td>
+      <td class="num">${p.quantity}</td>
+      <td class="num">${Number(p.price).toLocaleString()} ج.س</td>
+      <td class="num">${p.expiry_date || '—'}</td>
+      <td>${p.quantity <= 10 ? '<span class="pill pending">كمية منخفضة</span>' : '<span class="pill ok">متوفر</span>'}</td>
+      <td><button class="btn btn-ghost" style="padding:5px 12px;" onclick="openProductModal('${p.id}')">تعديل</button></td>
+    </tr>`).join('');
+}
+
+function expiryColor(date){
+  if(!date) return 'var(--ink-soft)';
+  const monthsLeft = (new Date(date) - new Date()) / (1000*60*60*24*30);
+  return monthsLeft < 3 ? 'var(--danger)' : 'var(--ok)';
+}
+
+function addToCart(productId){
+  alert('تمت إضافة المنتج للسلة (اربط هذه الدالة بحالة سلة حقيقية في التنفيذ النهائي).');
+}
+
+// ------------------------------------------------------------
+// إضافة / تعديل منتج (مع رفع الصورة إلى Supabase Storage)
+// ------------------------------------------------------------
+let editingProductId = null;
+
+function openProductModal(productId){
+  editingProductId = productId || null;
+  document.getElementById('productModal').classList.add('open');
+  document.querySelector('#productModal .modal-head h3').textContent = productId ? 'تعديل منتج' : 'إضافة منتج جديد';
+
+  if(productId && allProducts.length){
+    const p = allProducts.find(x => x.id === productId);
+    if(p){
+      document.getElementById('pName').value = p.name;
+      document.getElementById('pCategory').value = p.category_id || '';
+      document.getElementById('pQuantity').value = p.quantity;
+      document.getElementById('pPrice').value = p.price;
+      document.getElementById('pExpiry').value = p.expiry_date || '';
+      if(p.image_url){
+        document.getElementById('imgPreview').src = p.image_url;
+        document.getElementById('imgPreview').style.display = 'block';
+        document.getElementById('imgPlaceholder').style.display = 'none';
+      }
+    }
+  }
+}
+function closeProductModal(){
+  editingProductId = null;
+  document.getElementById('productModal').classList.remove('open');
+  document.getElementById('imgInput').value = '';
+  document.getElementById('imgPreview').style.display = 'none';
+  document.getElementById('imgPlaceholder').style.display = 'block';
+  document.getElementById('modalError').style.display = 'none';
+  ['pName','pQuantity','pPrice','pExpiry'].forEach(id => document.getElementById(id).value = '');
+}
+function previewImage(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const preview = document.getElementById('imgPreview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    document.getElementById('imgPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+document.getElementById('productModal').addEventListener('click', function(e){
+  if(e.target === this) closeProductModal();
+});
+
+async function saveProduct(){
+  const errBox = document.getElementById('modalError');
+  errBox.style.display = 'none';
+  const name = document.getElementById('pName').value.trim();
+  const categoryId = document.getElementById('pCategory').value;
+  const quantity = Number(document.getElementById('pQuantity').value) || 0;
+  const price = Number(document.getElementById('pPrice').value) || 0;
+  const expiry = document.getElementById('pExpiry').value || null;
+
+  if(!name){ errBox.textContent = 'اسم المنتج مطلوب'; errBox.style.display = 'block'; return; }
+  if(!supabaseClient){ errBox.textContent = 'قاعدة البيانات غير مربوطة — عوّض بيانات الاتصال في الكود.'; errBox.style.display = 'block'; return; }
+
+  const btn = document.getElementById('saveProductBtn');
+  btn.textContent = 'جارٍ الحفظ...'; btn.disabled = true;
+
+  try{
+    let imageUrl = null;
+    const file = document.getElementById('imgInput').files[0];
+    if(file){
+      const path = `products/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabaseClient.storage.from('product-images').upload(path, file);
+      if(upErr) throw upErr;
+      const { data: pub } = supabaseClient.storage.from('product-images').getPublicUrl(path);
+      imageUrl = pub.publicUrl;
+    }
+
+    const payload = { name, category_id: categoryId || null, quantity, price, expiry_date: expiry };
+    if(imageUrl) payload.image_url = imageUrl;
+
+    let error;
+    if(editingProductId){
+      ({ error } = await supabaseClient.from('products').update(payload).eq('id', editingProductId));
+    } else {
+      ({ error } = await supabaseClient.from('products').insert(payload));
+    }
+    if(error) throw error;
+
+    closeProductModal();
+    await loadProducts();
+  } catch(e){
+    errBox.textContent = 'خطأ أثناء الحفظ: ' + e.message;
+    errBox.style.display = 'block';
+  } finally {
+    btn.textContent = 'حفظ المنتج'; btn.disabled = false;
+  }
+}
+
+// ------------------------------------------------------------
+// تأكيد الطلب — إنشاء صف في orders + order_items
+// (مبسّطة: تفترض عربة عرض توضيحية؛ اربطها بحالة سلة حقيقية عند التنفيذ)
+// ------------------------------------------------------------
+async function confirmOrder(){
+  if(!supabase || !currentPharmacy){
+    alert('تأكيد الطلب يتطلب اتصالًا حقيقيًا بقاعدة البيانات وتسجيل دخول كصيدلية.');
+    return;
+  }
+  const paymentMethod = document.querySelector('input[name="pay"]:checked')?.parentElement.textContent.trim();
+  const methodMap = { 'كاش': 'cash', 'تحويل بنكي': 'bank_transfer', 'حساب آجل': 'credit' };
+
+  const btn = document.getElementById('confirmOrderBtn');
+  btn.textContent = 'جارٍ الإرسال...'; btn.disabled = true;
+  try{
+    const { data: order, error } = await supabaseClient.from('orders').insert({
+      pharmacy_id: currentPharmacy.id,
+      payment_method: methodMap[paymentMethod] || 'cash',
+      status: 'pending',
+      total: 0 // اربطها بإجمالي السلة الحقيقي
+    }).select().single();
+    if(error) throw error;
+    alert('تم إرسال الطلب رقم ' + order.id);
+  } catch(e){
+    alert('تعذر إرسال الطلب: ' + e.message);
+  } finally {
+    btn.textContent = 'تأكيد الطلب'; btn.disabled = false;
+  }
+}
+</script>
+
+</body>
+</html>
